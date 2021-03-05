@@ -12,7 +12,7 @@ import requests
 class MyThread(object):
 
     def __init__(self):
-        self.thread = []
+        self.threads = []
         self.arr = []
         self.play_list = []
         self.err_list = []
@@ -22,14 +22,31 @@ class MyThread(object):
         self.start()
         print(self.err_list)
 
+    def wait_threads(self, last = False):
+        def wait(self):
+            for thread in self.threads:
+                thread.join()
+            self.threads = []
+
+        if last == False:
+            if len(self.threads) == 30:
+                wait(self)
+        else:
+            wait(self)
+            
+
     def start(self):
         for music in self.play_list:
             x = threading.Thread(target=self.download, args=(music,))
-            self.thread.append(x)
+            self.threads.append(x)
             x.start()
+            self.wait_threads()
+        self.wait_threads(True)
 
     def pars(self):
-        r = requests.get(f"https://m.vk.com/audio?act=audio_playlist2000088379_2&access_hash=f63ebd24f227769cb1&from=/audio?act=audio_playlists2000088379&offset={self.offset}")
+        url = f"https://m.vk.com/audio?act=audio_playlist2000088379_2&access_hash=f63ebd24f227769cb1&from=/audio?act=audio_playlists2000088379&offset={self.offset}"
+        print(url)
+        r = requests.get(url)
         soup = BeautifulSoup(r.text, 'html.parser')
         for track in soup.find_all("div", "ai_label"):
             self.i += 1
@@ -44,32 +61,37 @@ class MyThread(object):
         assoc_arr_music = {}
         for key, music in enumerate(arr_music):
             assoc_arr_music[key] = music["proc"]
-        assoc_arr_music = list(assoc_arr_music.items()).sort(key=lambda i: i[1])
-        return arr_music[list(reversed(assoc_arr_music))[0]]
+        assoc_arr_music = list(assoc_arr_music.items())
+        assoc_arr_music.sort(key=lambda i: i[1])
+        return list(reversed(assoc_arr_music))[0]
 
     def download(self, music):
-        r = requests.get(f"https://vk.music7s.cc/api/search.php?search={music}&time={int(time())}")
+        url = f"https://vk.music7s.cc/api/search.php?search={music}&time={int(time())}"
+        r = requests.get(url)
         if not r.json()['error']:
             arr = []
-            print(r.json())
             for i in r.json()["items"]:
                 proc = int(jellyfish.jaro_similarity(music, f"{i['artist']} - {i['title']}") * 100)
                 title = f"{i['artist']} - {i['title']}".replace("/", "").replace("?", "")
                 arr.append({
                     "proc": proc,
                     "title": title,
+                    "url": i["url"]
                 })
-                #print(f"{title} - {music} \n percents: {proc}")
-                #if proc >= 60:
-                    #with open(f"C:/Users/kitpl/PycharmProjects/get_music/music/{title}.mp3", "wb") as music:
-                        #r = requests.get(urljoin("https://vk.music7s.cc", i['url']))
-                        #music.write(r.content)
-                    #break
+
+            similiar_music = self.sort_music_proc(arr)
+            music = arr[similiar_music[0]]
+            
+            if similiar_music[1] >= 60:
+                print(f"{music['title']} download. Percent similiar: {proc}")
+                r = requests.get(urljoin("https://vk.music7s.cc", music['url']), stream=True, timeout=None)
+                with open(f"musics/{music['title']}.mp3", "wb") as file:
+                    for chunk in r.iter_content(1024):
+                        file.write(chunk)
         else:
             self.err_list.append({
                 "track": music,
                 "error": r.json()
             })
-
 
 MyThread()
