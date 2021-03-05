@@ -40,6 +40,13 @@ class MyThread(object):
             title = track.find("span", "ai_title").text
             self.play_list.append(f"{art} - {title}")
 
+    def sort_music_proc(self, arr_music):
+        assoc_arr_music = {}
+        for key, music in enumerate(arr_music):
+            assoc_arr_music[key] = music["proc"]
+        assoc_arr_music = list(assoc_arr_music.items()).sort(key=lambda i: i[1])
+        return list(reversed(assoc_arr_music))[0]
+
     def download(self, music):
         r = requests.get(f"https://vk.music7s.cc/api/search.php?search={music}&time={int(time())}")
         if not r.json()['error']:
