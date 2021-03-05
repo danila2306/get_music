@@ -52,7 +52,6 @@ class MyThread(object):
                     "proc": proc,
                     "title": title,
                 })
-            print(arr.sort(key=lambda item: item.keys()))
                 #print(f"{title} - {music} \n percents: {proc}")
                 #if proc >= 60:
                     #with open(f"C:/Users/kitpl/PycharmProjects/get_music/music/{title}.mp3", "wb") as music:
