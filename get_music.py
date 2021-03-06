@@ -4,6 +4,7 @@ import jellyfish
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 from time import time
+import json
 import requests
 
 # https://vk.music7s.cc/api/search.php?search={name}&time=1614957922464
@@ -16,11 +17,15 @@ class MyThread(object):
         self.arr = []
         self.play_list = []
         self.err_list = []
+        self.download_music = []
         self.offset = 0
         self.i = 0
         self.pars()
         self.start()
-        print(self.err_list)
+        with open("errors.json", "w") as errors:
+            errors.write(json.dumps(self.err_list, indent=4))
+        with open("download.json", "w") as download:
+            download.write(json.dumps(self.download_music, indent=4))
 
     def wait_threads(self, last = False):
         def wait(self):
@@ -71,7 +76,7 @@ class MyThread(object):
         if not r.json()['error']:
             arr = []
             for i in r.json()["items"]:
-                proc = int(jellyfish.jaro_similarity(music, f"{i['artist']} - {i['title']}") * 100)
+                proc = int(jellyfish.jaro_similarity(music.lower(), f"{i['artist']} - {i['title']}".lower()) * 100)
                 title = f"{i['artist']} - {i['title']}".replace("/", "").replace("?", "")
                 arr.append({
                     "proc": proc,
@@ -79,10 +84,16 @@ class MyThread(object):
                     "url": i["url"]
                 })
 
+            search_music = music
             similiar_music = self.sort_music_proc(arr)
             music = arr[similiar_music[0]]
             
             if similiar_music[1] >= 60:
+                self.download_music.append({
+                    "dow_track_title": music['title'],
+                    "search_track_title": search_music,
+                    "proc": proc,
+                })
                 print(f"{music['title']} download. Percent similiar: {proc}")
                 r = requests.get(urljoin("https://vk.music7s.cc", music['url']), stream=True, timeout=None)
                 with open(f"musics/{music['title']}.mp3", "wb") as file:
